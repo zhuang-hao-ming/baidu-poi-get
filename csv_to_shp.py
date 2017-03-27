@@ -22,14 +22,38 @@ types = [
     '政府机构',
 ]
 
+# regionName = 'baoan.shp'
+regionName = 'longgan.shp'
+# regionName = 'yantian.shp'
+# regionName = 'luohu.shp'
+# regionName = 'futian.shp'
+# regionName = 'nanshan.shp'
+
+outputFeatureDir = '/feature_longgan'
+outputSelDir = '/sel_longgan'
+
 spRef = arcpy.SpatialReference(4326)
+arcpy.MakeFeatureLayer_management(regionName,"region_layer")
 try:
-    for i in range(len(types)):
-        type = types[i]
-        out_Layer = '%s.shp' % type 
-        saved_Layer = "shp/%s.shp" % type 
-        arcpy.MakeXYEventLayer_management("%s.csv" % type, "FIELD3", "FIELD2",out_Layer , spRef)
-        print(arcpy.GetCount_management(out_Layer))
-        arcpy.SaveToLayerFile_management(out_Layer, saved_Layer)
+    for type in types:
+        
+        out_Layer = type 
+        try:
+            arcpy.MakeXYEventLayer_management("%s.csv" % type, "FIELD3", "FIELD2",out_Layer , spRef)
+        except Exception as err1:
+            continue
+        print(u'数目', arcpy.GetCount_management(out_Layer))
+
+        
+        arcpy.FeatureClassToFeatureClass_conversion(out_Layer, outputFeatureDir, '%s_feature' % out_Layer)
+        
+        feature_layer = "feature_layer%s" % type
+        
+        arcpy.MakeFeatureLayer_management(outputFeatureDir + '/%s_feature.shp' % type,feature_layer)
+
+        arcpy.SelectLayerByLocation_management(feature_layer, 'WITHIN','region_layer')
+        
+        arcpy.CopyFeatures_management(feature_layer, outputSelDir + '/%s_sel' % out_Layer)
 except Exception as err:
     print(err.args[0])
+    print('error')

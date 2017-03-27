@@ -26,11 +26,11 @@ let qBase = {
 function getPoiPromise(q) {
     return new Promise((resolve, reject) => {
 
-        async.retry(5, (cb) => {
+        async.retry(10, (cb) => {
             superagent.get(config.url)
                 .query(q)
                 .timeout({
-                    response: 500
+                    response: 5000
                 })
                 .end((err, res) => {
                     if (err) {
@@ -43,8 +43,16 @@ function getPoiPromise(q) {
             if (err) {
                 resolve({ err, q }) // 重连5次后，仍然错误， 也不要抛出错误，避免程序终止
             } else {
-                let obj = JSON.parse(res.text)
-                resolve(obj)
+                let obj
+                try {
+                    obj = JSON.parse(res.text)
+                    resolve(obj)
+                } catch(err) {
+                    console.log(res.text)
+                    resolve({ err, q }) // 重连5次后，仍然错误， 也不要抛出错误，避免程序终止
+                }
+                
+                
 
             }
         })
@@ -100,7 +108,7 @@ function* get(type = '政府机构', config = config, numOfCell = 100) {
         prePromiseArr.push(thunnkGet(q))
     }
 
-    let preResArr = yield parallel(prePromiseArr, 80)
+    let preResArr = yield parallel(prePromiseArr, 50)
 
     for (let i = 0; i < preResArr.length; i++) {
         numOfPoints += preResArr[i].total
@@ -130,7 +138,7 @@ function* get(type = '政府机构', config = config, numOfCell = 100) {
         }
     }
 
-    let resArr = yield parallel(promiseArr, 100)
+    let resArr = yield parallel(promiseArr, 50)
 
     for (let i = 0; i < resArr.length; i++) {
 
@@ -145,6 +153,9 @@ function* get(type = '政府机构', config = config, numOfCell = 100) {
         console.log(`获得 ${results.length} 条`)
         for (let j = 0; j < results.length; j++) {
             let item = results[j]
+            if ( !item || !item.location) {
+                continue
+            }
             let wgsLnglat = transform.bd2wgs(item.location.lat, item.location.lng)
             writer.write(`${item.name},${wgsLnglat.lat},${wgsLnglat.lng},${item.address},${item.uid}\n`)
         }
