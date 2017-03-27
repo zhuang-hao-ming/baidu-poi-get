@@ -26,7 +26,7 @@ const config = require('./config')
 
 
 
-// 解决请求过多时，网络连接超时的问题
+
 
 co(function* () {
     for (let i = 0; i < types.length; i++) {
